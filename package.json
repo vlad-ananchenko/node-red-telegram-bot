@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "prestart": "cd data/node-red && npm install",
+    "start": "docker-compose up -d",
+    "logs": "docker-compose logs -f node-red",
+    "start:logs": "npm run start && npm run logs",
+    "stop": "docker-compose down --remove-orphans"
+  }
+}

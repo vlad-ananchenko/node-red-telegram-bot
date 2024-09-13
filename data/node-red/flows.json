@@ -1,0 +1,1361 @@
+[
+    {
+        "id": "85339f82785db2c3",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "07abddc7d9e03a93",
+        "type": "postgreSQLConfig",
+        "name": "DB Connection",
+        "host": "DATABASE_HOST",
+        "hostFieldType": "env",
+        "port": "DATABASE_PORT",
+        "portFieldType": "env",
+        "database": "DATABASE_NAME",
+        "databaseFieldType": "env",
+        "ssl": "true",
+        "sslFieldType": "bool",
+        "applicationName": "",
+        "applicationNameType": "str",
+        "max": "10",
+        "maxFieldType": "num",
+        "idle": "1000",
+        "idleFieldType": "num",
+        "connectionTimeout": "10000",
+        "connectionTimeoutFieldType": "num",
+        "user": "DATABASE_USER",
+        "userFieldType": "env",
+        "password": "DATABASE_PASSWORD",
+        "passwordFieldType": "env"
+    },
+    {
+        "id": "0ad08e561b9facd9",
+        "type": "http in",
+        "z": "85339f82785db2c3",
+        "name": "Handle Telegram WebHook",
+        "url": "/webhook",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 110,
+        "y": 700,
+        "wires": [
+            [
+                "7d52a6f95a738fdf",
+                "3712147866ee51b2",
+                "363605bb51bb04fe"
+            ]
+        ]
+    },
+    {
+        "id": "a0bbe9688be6daea",
+        "type": "inject",
+        "z": "85339f82785db2c3",
+        "name": "Create Contacts And Users Tables In DB Setup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.5",
+        "topic": "",
+        "x": 240,
+        "y": 80,
+        "wires": [
+            [
+                "0c70fa237d20c34a"
+            ]
+        ]
+    },
+    {
+        "id": "0c70fa237d20c34a",
+        "type": "postgresql",
+        "z": "85339f82785db2c3",
+        "name": "Create Contacts And Users Tables In DB",
+        "query": "CREATE TABLE IF NOT EXISTS users (\n  id SERIAL PRIMARY KEY,\n  username TEXT NOT NULL UNIQUE\n);\n\nCREATE TABLE IF NOT EXISTS contacts (\n  id SERIAL PRIMARY KEY,\n  user_id INT REFERENCES users(id) ON DELETE CASCADE,\n  name TEXT NOT NULL,\n  birthday DATE,\n  CONSTRAINT contacts_user_id_name_birthday_key UNIQUE (user_id, name, birthday)\n);",
+        "postgreSQLConfig": "07abddc7d9e03a93",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 600,
+        "y": 80,
+        "wires": [
+            [
+                "5571cf97db878d67"
+            ]
+        ]
+    },
+    {
+        "id": "5571cf97db878d67",
+        "type": "debug",
+        "z": "85339f82785db2c3",
+        "name": "Show DB Initialization Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 900,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "7d52a6f95a738fdf",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Identify Command and Extract Data",
+        "func": "const InitialCommandState = flow.get('InitialCommandState');\nconst extractMsgCommonValues = flow.get('extractMsgCommonValues');\n\nconst msgCommonValues = extractMsgCommonValues(msg);\n\nconst commandHandler = InitialCommandState[msgCommonValues.command];\nconst specificCommandValues = commandHandler ? commandHandler(msg) : { state: 'unknownCommand' };\n\nreturn { ...msgCommonValues, ...specificCommandValues };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 700,
+        "wires": [
+            [
+                "338148db2abafbfa",
+                "cb8cf84e31f51a96"
+            ]
+        ]
+    },
+    {
+        "id": "cb8cf84e31f51a96",
+        "type": "switch",
+        "z": "85339f82785db2c3",
+        "name": "Command Router",
+        "property": "command",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "/start",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "/add",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "/contacts",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "/delete",
+                "vt": "str"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 4,
+        "x": 670,
+        "y": 700,
+        "wires": [
+            [
+                "5890591c9b05f795"
+            ],
+            [
+                "d34232eb4d992697"
+            ],
+            [
+                "5d813b572e6555c6"
+            ],
+            [
+                "9a39795ee22e8e0b"
+            ]
+        ]
+    },
+    {
+        "id": "24c53251e6db1b48",
+        "type": "postgresql",
+        "z": "85339f82785db2c3",
+        "name": "Check If User Exists In DB",
+        "query": "SELECT id FROM users WHERE username = $1;",
+        "postgreSQLConfig": "07abddc7d9e03a93",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 1420,
+        "y": 360,
+        "wires": [
+            [
+                "7db95baca498f67c"
+            ]
+        ]
+    },
+    {
+        "id": "5890591c9b05f795",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Prepare Username Param For Checking In DB",
+        "func": "msg.params = [msg.username]; \n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1040,
+        "y": 360,
+        "wires": [
+            [
+                "24c53251e6db1b48"
+            ]
+        ]
+    },
+    {
+        "id": "db08e0ef8617f79a",
+        "type": "postgresql",
+        "z": "85339f82785db2c3",
+        "name": "User Registration In DB",
+        "query": "INSERT INTO users (username) VALUES ($1) RETURNING id;",
+        "postgreSQLConfig": "07abddc7d9e03a93",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 3350,
+        "y": 380,
+        "wires": [
+            [
+                "18e85ca00bae18f3"
+            ]
+        ]
+    },
+    {
+        "id": "f84d4ab58b7e18a6",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Prepare Params For User Registration",
+        "func": "msg.params = [msg.username]; \n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 3070,
+        "y": 380,
+        "wires": [
+            [
+                "db08e0ef8617f79a"
+            ]
+        ]
+    },
+    {
+        "id": "48d2175d50b63d42",
+        "type": "http request",
+        "z": "85339f82785db2c3",
+        "name": "Send Telegram Message",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": true,
+        "headers": [
+            {
+                "keyType": "Content-Type",
+                "keyValue": "",
+                "valueType": "application/json",
+                "valueValue": ""
+            }
+        ],
+        "x": 6370,
+        "y": 720,
+        "wires": [
+            [
+                "2af2d9901c40d308"
+            ]
+        ]
+    },
+    {
+        "id": "18e85ca00bae18f3",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Generate Response Message For \"/start\" Command",
+        "func": "const StartCommandMessages = flow.get('StartCommandMessages');\n\nconst { chatId: chat_id, lang, state } = msg;\n\nconst registrationHandlers = {\n    registered: () => StartCommandMessages.registered[lang],\n    welcome: () => StartCommandMessages.welcome[lang]\n};\n\nconst text = registrationHandlers[state]();\n\nreturn { ...msg, payload: { chat_id, text } };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 5040,
+        "y": 360,
+        "wires": [
+            [
+                "2a61f3a91dfa6017",
+                "22390a3bb9742512"
+            ]
+        ]
+    },
+    {
+        "id": "338148db2abafbfa",
+        "type": "debug",
+        "z": "85339f82785db2c3",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 640,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "3712147866ee51b2",
+        "type": "http response",
+        "z": "85339f82785db2c3",
+        "name": "Immediate 200 OK Response",
+        "statusCode": "200",
+        "headers": {},
+        "x": 390,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "2a61f3a91dfa6017",
+        "type": "debug",
+        "z": "85339f82785db2c3",
+        "name": "debug 6",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 5320,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "d1336e96c3327ac0",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "\"/start\" Command Translate Messages",
+        "func": "const StartCommandMessages = {\n    registered: {\n        en: \"You are already registered! ✅\",\n        ru: \"Вы уже зарегистрированы! ✅\",\n        uk: \"Ви вже зареєстровані! ✅\"\n    },\n    welcome: {\n        en: \"Welcome! 🎉 Use /add [name] [YYYY-MM-DD] to add a new contact.\",\n        ru: \"Добро пожаловать! 🎉 Используйте /add [имя] [ГГГГ-ММ-ДД], чтобы добавить новый контакт.\",\n        uk: \"Ласкаво просимо! 🎉 Використовуйте /add [им'я] [РРРР-ММ-ДД], щоб додати новий контакт.\"\n    }\n};\n\nflow.set('StartCommandMessages', StartCommandMessages);\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 590,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "988f58bed0bb4cbd",
+        "type": "inject",
+        "z": "85339f82785db2c3",
+        "name": "\"/start\" Command Translate Messages Setup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 240,
+        "y": 280,
+        "wires": [
+            [
+                "d1336e96c3327ac0"
+            ]
+        ]
+    },
+    {
+        "id": "363605bb51bb04fe",
+        "type": "debug",
+        "z": "85339f82785db2c3",
+        "name": "debug 9",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 320,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "8fd1a92f38e034ed",
+        "type": "postgresql",
+        "z": "85339f82785db2c3",
+        "name": "Hard User Deletion",
+        "query": "DELETE FROM users WHERE username = $1;",
+        "postgreSQLConfig": "07abddc7d9e03a93",
+        "split": true,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 1390,
+        "y": 980,
+        "wires": [
+            [
+                "57d202a109c3961b"
+            ]
+        ]
+    },
+    {
+        "id": "57d202a109c3961b",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Hard Delete Success Message",
+        "func": "const DeleteCommandMessages = flow.get('DeleteCommandMessages');\n\nconst { chatId: chat_id, lang, state } = msg;\n\nconst text = DeleteCommandMessages[state][lang];\n\nreturn { ...msg, payload: { chat_id, text } };\n\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1630,
+        "y": 980,
+        "wires": [
+            [
+                "22390a3bb9742512"
+            ]
+        ]
+    },
+    {
+        "id": "10f6b077d592d583",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Initial Command State",
+        "func": "const InitialCommandState = {\n  '/start': (msg) => {\n    return { state: 'welcome' };\n  },\n  '/add': (msg) => {\n    const parts = msg.payload.message.text.split(' ');\n\n    if (parts.length >= 3) {\n      const contactName = parts[1];\n      const birthday = parts[2];\n\n      return { contactName, birthday, state: \"notRegistered\" };\n    }\n\n    return { state: 'invalidAddCommand' };\n  },\n  '/contacts': (msg) => {\n    const parts = msg.payload.message.text.split(' ');\n    const contactName = parts.length > 1 ? parts[1] : null;\n\n    if (contactName) {\n      return { contactName, state: 'contactBirthday' }\n    };\n    \n    return { state: 'allContacts' };\n  },\n  '/delete': (msg) => ({ ...msg, state: 'allDeleted' })\n};\n\nflow.set('InitialCommandState', InitialCommandState);\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 40,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "d5e14bf95d391259",
+        "type": "inject",
+        "z": "85339f82785db2c3",
+        "name": "Initial Command State Setup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 180,
+        "y": 40,
+        "wires": [
+            [
+                "10f6b077d592d583"
+            ]
+        ]
+    },
+    {
+        "id": "d45bdc76c3e68ff7",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Extract Msg Common Values",
+        "func": "const extractMsgCommonValues = (msg) => {\n  const { message: { chat, text, from: { username, language_code } } } = msg.payload;\n  const command = text.split(' ')[0];\n  const chatId = chat.id;\n  const lang = language_code;\n  const state = 'initial';\n\n  return { ...msg, state, chatId, username, command, lang };\n}\n\nflow.set('extractMsgCommonValues', extractMsgCommonValues);\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b617cfd7ea3023b5",
+        "type": "inject",
+        "z": "85339f82785db2c3",
+        "name": "Extract Msg Common Values Setup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 210,
+        "y": 140,
+        "wires": [
+            [
+                "d45bdc76c3e68ff7"
+            ]
+        ]
+    },
+    {
+        "id": "d315efa5665024b4",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Validate Birthday Date",
+        "func": "const validateDate = flow.get('validateDate');\n\nif (!validateDate(msg.birthday)) {\n    msg.state = 'invalidDateFormat';\n}\n\nreturn msg;\n\n\n\n\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2240,
+        "y": 600,
+        "wires": [
+            [
+                "4f688afebacd4201"
+            ]
+        ]
+    },
+    {
+        "id": "86567f20390a1f77",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Generate Response Message For \"/add\" Command",
+        "func": "const AddCommandMessages = flow.get('AddCommandMessages');\n\nconst { contactName, birthday, lang, state, chatId: chat_id } = msg;\n\nconst stateHandlers = {\n    notRegistered: () => {\n        const text = AddCommandMessages.notRegistered[lang];\n        return { chat_id, text };\n    },\n    invalidDateFormat: () => {\n        const text = AddCommandMessages.invalidDateFormat[lang](birthday);\n        return { chat_id, text };\n    },\n    contactAlreadyExists: () => {\n        const text = AddCommandMessages.contactAlreadyExists[lang](contactName, birthday);\n        return { chat_id, text };\n    },\n    contactAdded: () => {\n        const text = AddCommandMessages.contactAdded[lang](contactName, birthday);\n        return { chat_id, text };\n    },\n    invalidAddCommand: () => {\n        const text = AddCommandMessages.invalidAddCommand[lang];\n        return { chat_id, text };\n    }\n};\n\nconst payload = stateHandlers[msg.state]();\n\nreturn { ...msg, payload };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 5040,
+        "y": 640,
+        "wires": [
+            [
+                "22390a3bb9742512",
+                "6f93b364bf882cfa"
+            ]
+        ]
+    },
+    {
+        "id": "4ec356b57cb56546",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "\"/add\" Command Translate Messages",
+        "func": "const AddCommandMessages = {\n    contactAdded: {\n        en: (name, date) => `Contact ${name} with birthday ${date} has been successfully added ✅`,\n        ru: (name, date) => `Контакт ${name} с днём рождения ${date} успешно добавлен ✅`,\n        uk: (name, date) => `Контакт ${name} з днем народження ${date} успішно додано ✅`\n    },\n    contactAlreadyExists: {\n        en: (name, date) => `Contact ${name} with birthday ${date} already exists ⚠️`,\n        ru: (name, date) => `Контакт ${name} с днём рождения ${date} уже существует ⚠️`,\n        uk: (name, date) => `Контакт ${name} з днем народження ${date} вже існує ⚠️`\n    },\n    invalidDateFormat: {\n        en: (birthday) => `Invalid date format \"${birthday}\". Please use the format YYYY-MM-DD ❌`,\n        ru: (birthday) => `Неверный формат даты \"${birthday}\". Пожалуйста, используйте формат YYYY-MM-DD ❌`,\n        uk: (birthday) => `Некоректний формат дати \"${birthday}\". Використовуйте формат РРРР-ММ-ДД ❌`\n    },\n    notRegistered: {\n        en: \"You are not registered. Please register first using the /start command ⚠️\",\n        ru: \"Вы не зарегистрированы. Пожалуйста, сначала зарегистрируйтесь с помощью команды /start ⚠️\",\n        uk: \"Ви не зареєстровані. Будь ласка, спочатку зареєструйтеся за допомогою команди /start ⚠️\"\n    },\n    invalidAddCommand: {\n        en: \"Invalid format for the /add command. Please use the correct format: /add [name] [YYYY-MM-DD] ❌\",\n        ru: \"Неверный формат команды /add. Пожалуйста, используйте правильный формат: /add [имя] [ГГГГ-ММ-ДД] ❌\",\n        uk: \"Некоректний формат команди /add. Будь ласка, використовуйте правильний формат: /add [ім'я] [РРРР-ММ-ДД] ❌\"\n    }\n};\n\nflow.set('AddCommandMessages', AddCommandMessages);\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "63789754d384db1d",
+        "type": "inject",
+        "z": "85339f82785db2c3",
+        "name": "\"/add\" Command Translate Messages Setup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 230,
+        "y": 320,
+        "wires": [
+            [
+                "4ec356b57cb56546"
+            ]
+        ]
+    },
+    {
+        "id": "22390a3bb9742512",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Build Telegram Send Message URL",
+        "func": "const token = global.get('telegramBotToken');\nconst apiUrlPrefix = global.get('telegramBotApiUrlPrefix');\nconst sendMessagePostfix = global.get('sendMessagePostfix');\n\nmsg = { ...msg, url: `${apiUrlPrefix}${token}/${sendMessagePostfix}` };\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 6100,
+        "y": 720,
+        "wires": [
+            [
+                "48d2175d50b63d42"
+            ]
+        ]
+    },
+    {
+        "id": "2af2d9901c40d308",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "HTTP Status Check",
+        "func": "const { statusCode, payload, chatId, command, ...rest } = msg;\n\nconst res = statusCode === 200 ? node.log('Request was completed successfully') : node.error(`Error sending request: ${statusCode}`);\n\nreturn res;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 6590,
+        "y": 720,
+        "wires": [
+            [
+                "285a0ed8a76640df"
+            ]
+        ]
+    },
+    {
+        "id": "22e698c71c302a87",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Validate Date",
+        "func": "const validateDate = (dateString) => {\n    const dateRegExp = /^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$/;\n    return dateRegExp.test(dateString);\n};\n\nflow.set('validateDate', validateDate);",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "cb96fc5e65ad4942",
+        "type": "inject",
+        "z": "85339f82785db2c3",
+        "name": "Validate Date Setup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 160,
+        "y": 180,
+        "wires": [
+            [
+                "22e698c71c302a87"
+            ]
+        ]
+    },
+    {
+        "id": "cb906d2103f3d2c3",
+        "type": "postgresql",
+        "z": "85339f82785db2c3",
+        "name": "Check If Contact Exists In DB",
+        "query": "SELECT 1 \nFROM contacts \nWHERE user_id = (SELECT id FROM users WHERE username = $1) \n  AND name = $2 \n  AND birthday = $3;\n",
+        "postgreSQLConfig": "07abddc7d9e03a93",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 3130,
+        "y": 580,
+        "wires": [
+            [
+                "771d4b90b17a959a"
+            ]
+        ]
+    },
+    {
+        "id": "7db95baca498f67c",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Set State Based On Registration Status",
+        "func": "const isUserExists = Boolean(msg.payload && msg.payload.length > 0);\n\nmsg.state = isUserExists ? \"registered\" : msg.state;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1720,
+        "y": 360,
+        "wires": [
+            [
+                "dca304bd7190a123"
+            ]
+        ]
+    },
+    {
+        "id": "dca304bd7190a123",
+        "type": "switch",
+        "z": "85339f82785db2c3",
+        "name": "Check Current State",
+        "property": "state",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "registered",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "welcome",
+                "vt": "str"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 2000,
+        "y": 360,
+        "wires": [
+            [
+                "18e85ca00bae18f3"
+            ],
+            [
+                "f84d4ab58b7e18a6"
+            ]
+        ]
+    },
+    {
+        "id": "285a0ed8a76640df",
+        "type": "debug",
+        "z": "85339f82785db2c3",
+        "name": "debug 19",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 6760,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "156bb178deaf42ce",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Set State Based On Registration Status",
+        "func": "const isUserExists = Boolean(msg.payload && msg.payload.length > 0);\n\nmsg.state = (msg.state === \"invalidAddCommand\") ? msg.state : (isUserExists ? \"userRegistered\" : \"notRegistered\");\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1720,
+        "y": 620,
+        "wires": [
+            [
+                "62bbfce3e40b38e2"
+            ]
+        ]
+    },
+    {
+        "id": "62bbfce3e40b38e2",
+        "type": "switch",
+        "z": "85339f82785db2c3",
+        "name": "Check Current State",
+        "property": "state",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "userRegistered",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "notRegistered",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "invalidAddCommand",
+                "vt": "str"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 3,
+        "x": 2000,
+        "y": 620,
+        "wires": [
+            [
+                "d315efa5665024b4"
+            ],
+            [
+                "86567f20390a1f77"
+            ],
+            [
+                "86567f20390a1f77"
+            ]
+        ]
+    },
+    {
+        "id": "7284f4e412a00391",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Prepare Params For Checking Existence Of Contact",
+        "func": "const { username, contactName, birthday } = msg;\n\nmsg.params = [username, contactName, birthday];\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2780,
+        "y": 580,
+        "wires": [
+            [
+                "cb906d2103f3d2c3"
+            ]
+        ]
+    },
+    {
+        "id": "4f688afebacd4201",
+        "type": "switch",
+        "z": "85339f82785db2c3",
+        "name": "Check Current State",
+        "property": "state",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "userRegistered",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "invalidDateFormat",
+                "vt": "str"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 2460,
+        "y": 600,
+        "wires": [
+            [
+                "7284f4e412a00391"
+            ],
+            [
+                "86567f20390a1f77"
+            ]
+        ]
+    },
+    {
+        "id": "771d4b90b17a959a",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Set State Based On Existence Of Contact",
+        "func": "const isContactExists = Boolean(msg.payload && msg.payload.length > 0);\n\nmsg.state = isContactExists ? \"contactAlreadyExists\" : \"contactNotYetAdded\";\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 3440,
+        "y": 580,
+        "wires": [
+            [
+                "b01d6ee67e73d5c1"
+            ]
+        ]
+    },
+    {
+        "id": "b01d6ee67e73d5c1",
+        "type": "switch",
+        "z": "85339f82785db2c3",
+        "name": "Check Current State",
+        "property": "state",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "contactNotYetAdded",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "contactAlreadyExists",
+                "vt": "str"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 3720,
+        "y": 580,
+        "wires": [
+            [
+                "e2ca033f5753eb63"
+            ],
+            [
+                "86567f20390a1f77"
+            ]
+        ]
+    },
+    {
+        "id": "e2ca033f5753eb63",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Prepare Params For Adding Contact",
+        "func": "const { username, contactName, birthday } = msg;\n\nmsg.params = [username, contactName, birthday];\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 4030,
+        "y": 560,
+        "wires": [
+            [
+                "897e67a1ba2d8a63"
+            ]
+        ]
+    },
+    {
+        "id": "897e67a1ba2d8a63",
+        "type": "postgresql",
+        "z": "85339f82785db2c3",
+        "name": "Add Contact to DB",
+        "query": "INSERT INTO contacts (user_id, name, birthday)\nVALUES ((SELECT id FROM users WHERE username = $1), $2, $3)\nRETURNING *;\n",
+        "postgreSQLConfig": "07abddc7d9e03a93",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 4290,
+        "y": 560,
+        "wires": [
+            [
+                "e93628ef461f88b0"
+            ]
+        ]
+    },
+    {
+        "id": "e93628ef461f88b0",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Set State After Checking If Contact Has Been Added",
+        "func": "const isContactAdded = Boolean(msg.payload && msg.payload.length > 0);\n\nmsg.state = isContactAdded ? \"contactAdded\" : \"userRegistered\";\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 4600,
+        "y": 560,
+        "wires": [
+            [
+                "86567f20390a1f77"
+            ]
+        ]
+    },
+    {
+        "id": "779de930e9303692",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Prepare Params For Finding Contacts In DB Based On State",
+        "func": "const prepareParams = (msg) => {\n  const { username, state } = msg;\n  const contactName = msg.contactName || null;\n\n  if (state === \"contactBirthday\" && contactName) {\n    msg.query = `\n      SELECT name, birthday \n      FROM contacts \n      WHERE user_id = (SELECT id FROM users WHERE username = $1) \n      AND name = $2;\n    `;\n\n    msg.params = [username, contactName];\n\n  } else if (state === \"allContacts\") {\n    msg.query = `\n      SELECT name, birthday \n      FROM contacts \n      WHERE user_id = (SELECT id FROM users WHERE username = $1);\n    `;\n\n    msg.params = [username];\n  } else {\n    msg.error = \"Unknown state. Unable to prepare parameters.\";\n  }\n\n  return msg;\n};\n\nconst commandResult = prepareParams(msg);\n\nreturn commandResult;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2180,
+        "y": 740,
+        "wires": [
+            [
+                "bcd5232c03b46caf",
+                "7ec2db5704a125b3"
+            ]
+        ]
+    },
+    {
+        "id": "bcd5232c03b46caf",
+        "type": "debug",
+        "z": "85339f82785db2c3",
+        "name": "debug 20",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2480,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "7ec2db5704a125b3",
+        "type": "postgresql",
+        "z": "85339f82785db2c3",
+        "name": "Find All Contacts By Name",
+        "query": "SELECT name, TO_CHAR(birthday, 'YYYY-MM-DD') as birthday \nFROM contacts \nWHERE user_id = (SELECT id FROM users WHERE username = $1) \nAND name = $2;\n",
+        "postgreSQLConfig": "07abddc7d9e03a93",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 2540,
+        "y": 740,
+        "wires": [
+            [
+                "2aa35c498533d212"
+            ]
+        ]
+    },
+    {
+        "id": "2aa35c498533d212",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Determine Number Of Found Contacts",
+        "func": "const { state, payload } = msg;\n\nconst existingContactsNumber = payload.length;\n\nconst isContactBirthday = state === 'contactBirthday';\nconst isAllContacts = state === 'allContacts';\n\nconst hasOneContact = existingContactsNumber === 1;\nconst hasMultipleContacts = existingContactsNumber > 1;\n\nconst stateDecider = {\n    contactBirthday: () => hasOneContact && isContactBirthday,\n    multipleContactsFound: () => hasMultipleContacts && isContactBirthday,\n    allContacts: () => isAllContacts,\n    contactNotFound: () => true\n};\n\nmsg.state = Object.keys(stateDecider).find(key => stateDecider[key]());\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2830,
+        "y": 740,
+        "wires": [
+            [
+                "6cb364084709c131",
+                "11f4bf9ef07f02f8"
+            ]
+        ]
+    },
+    {
+        "id": "ded1028c08501b22",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "\"/contacts\" Command Translate Messages",
+        "func": "const ContactsCommandMessages = {\n    contactBirthday: {\n        en: (name, birthday) => `The birthday 🎂 of ${name}: ${birthday}`,\n        ru: (name, birthday) => `День рождения 🎂 ${name}: ${birthday}`,\n        uk: (name, birthday) => `День народження 🎂 ${name}: ${birthday}`\n    },\n    multipleContactsFound: {\n        en: (name, contacts) => `Multiple contacts with the name ${name} found 🕵🏻:\\n${contacts}`,\n        ru: (name, contacts) => `Найдено 🕵🏻 несколько контактов с именем ${name}:\\n${contacts}`,\n        uk: (name, contacts) => `Знайдено 🕵🏻 декілька контактів з ім'ям ${name}:\\n${contacts}`\n    },\n    contactNotFound: {\n        en: (name) => `Contact ${name} not found 😩`,\n        ru: (name) => `Контакт ${name} не найден 😩`,\n        uk: (name) => `Контакт ${name} не знайдено 😩`\n    },\n    notRegistered: {\n        en: \"You are not registered. Please register first using the ⏩ /start command.\",\n        ru: \"Вы не зарегистрированы. Пожалуйста, сначала зарегистрируйтесь с помощью команды ⏩ /start.\",\n        uk: \"Ви не зареєстровані. Будь ласка, спочатку зареєструйтеся за допомогою команди ⏩ /start.\"\n    },\n    allContacts: {\n        en: (contacts) => `Here is the list of all your contacts  📒:\\n${contacts}`,\n        ru: (contacts) => `Вот список всех ваших контактов 📒:\\n${contacts} `,\n        uk: (contacts) => `Ось список всіх ваших контактів 📒:\\n${contacts}`\n    },\n    noContacts: {\n        en: \"You have not added any contacts yet 📝\",\n        ru: \"Вы еще не добавили ни одного контакта 📝\",\n        uk: \"Ви ще не додали жодного контакту 📝\"\n    }\n};\n\nflow.set('ContactsCommandMessages', ContactsCommandMessages);",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 360,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f30d137a6de783b5",
+        "type": "inject",
+        "z": "85339f82785db2c3",
+        "name": "\"/contacts\" Command Translate Messages Setup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 250,
+        "y": 360,
+        "wires": [
+            [
+                "ded1028c08501b22"
+            ]
+        ]
+    },
+    {
+        "id": "6df11d6193d842ff",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Check And Set State Based On Registration Status",
+        "func": "const isUserExists = Boolean(msg.payload && msg.payload.length > 0);\n\nif (isUserExists) {\n    return [msg, null];\n    \n} else {\n    msg.state = \"notRegistered\";\n    \n    return [null, msg];\n}\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1750,
+        "y": 780,
+        "wires": [
+            [
+                "779de930e9303692"
+            ],
+            [
+                "11f4bf9ef07f02f8"
+            ]
+        ]
+    },
+    {
+        "id": "6cb364084709c131",
+        "type": "debug",
+        "z": "85339f82785db2c3",
+        "name": "debug 29",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 3060,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "babdcb4b858d5746",
+        "type": "inject",
+        "z": "85339f82785db2c3",
+        "name": "Format Birthday Setup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 160,
+        "y": 220,
+        "wires": [
+            [
+                "e30d6d9b02cd0a36"
+            ]
+        ]
+    },
+    {
+        "id": "e30d6d9b02cd0a36",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Format Birthday",
+        "func": "const formatBirthday = (birthday, lang) => {\n    const date = new Date(birthday);\n    \n    return date.toLocaleDateString(lang, { year: 'numeric', month: 'long', day: 'numeric' });\n};\n\nflow.set('formatBirthday', formatBirthday);",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "fe201ba8a74a9a94",
+        "type": "postgresql",
+        "z": "85339f82785db2c3",
+        "name": "Check If User Exists In DB",
+        "query": "SELECT id FROM users WHERE username = $1;",
+        "postgreSQLConfig": "07abddc7d9e03a93",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 1420,
+        "y": 780,
+        "wires": [
+            [
+                "6df11d6193d842ff"
+            ]
+        ]
+    },
+    {
+        "id": "16ea04265176537b",
+        "type": "postgresql",
+        "z": "85339f82785db2c3",
+        "name": "Check If User Exists In DB",
+        "query": "SELECT id FROM users WHERE username = $1;",
+        "postgreSQLConfig": "07abddc7d9e03a93",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 1420,
+        "y": 620,
+        "wires": [
+            [
+                "156bb178deaf42ce"
+            ]
+        ]
+    },
+    {
+        "id": "9a39795ee22e8e0b",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Prepare Username Param For Checking In DB",
+        "func": "msg.params = [msg.username];\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1040,
+        "y": 980,
+        "wires": [
+            [
+                "8fd1a92f38e034ed"
+            ]
+        ]
+    },
+    {
+        "id": "d34232eb4d992697",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Prepare Username Param For Checking In DB",
+        "func": "msg.params = [msg.username]; \n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1020,
+        "y": 620,
+        "wires": [
+            [
+                "16ea04265176537b"
+            ]
+        ]
+    },
+    {
+        "id": "5d813b572e6555c6",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Prepare Username Param For Checking In DB",
+        "func": "msg.params = [msg.username]; \n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1020,
+        "y": 780,
+        "wires": [
+            [
+                "fe201ba8a74a9a94"
+            ]
+        ]
+    },
+    {
+        "id": "11f4bf9ef07f02f8",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "Generate Response Message For \"/contacts\" Command",
+        "func": "const ContactsCommandMessages = flow.get('ContactsCommandMessages');\nconst formatBirthday = flow.get('formatBirthday');\n\nconst { chatId: chat_id, lang, payload, state, contactName } = msg;\n\nconst stateHandlers = {\n    contactBirthday: () => {\n        const birthday = formatBirthday(payload[0].birthday, lang);\n        const name = payload[0].name;\n        const text = ContactsCommandMessages.contactBirthday[lang](name, birthday);\n\n        return { chat_id, text };\n    },\n    multipleContactsFound: () => {\n        const contactList = payload.map(({ name, birthday }, index) => {\n            const formattedBirthday = formatBirthday(birthday, lang);\n\n            return `${index + 1}. ${name}, ${formattedBirthday}`;\n        }).join('\\n');\n\n        const text = ContactsCommandMessages.multipleContactsFound[lang](contactName, contactList);\n\n        return { chat_id, text };\n    },\n    allContacts: () => {\n        if (payload.length > 0) {\n            const contactList = payload.map(({ name, birthday }) => {\n                const formattedBirthday = formatBirthday(birthday, lang);\n\n                return `${name}, ${formattedBirthday}`;\n            }).join('\\n');\n\n            const text = ContactsCommandMessages.allContacts[lang](contactList);\n\n            return { chat_id, text };\n        } else {\n            const text = ContactsCommandMessages.noContacts[lang];\n\n            return { chat_id, text };\n        }\n    },\n    contactNotFound: () => {\n        const text = contactName ? ContactsCommandMessages.contactNotFound[lang](contactName) : ContactsCommandMessages.noContacts[lang];\n\n        return { chat_id, text };\n    },\n    notRegistered: () => {\n        const text = ContactsCommandMessages.notRegistered[lang];\n\n        return { chat_id, text };\n    },\n    noContacts: () => {\n        const text = ContactsCommandMessages.noContacts[lang];\n\n        return { chat_id, text };\n    }\n};\n\nconst payloadResponse = stateHandlers[state] ? stateHandlers[state]() : { chat_id, text: 'Unknown state' };\n\nreturn { ...msg, payload: payloadResponse };\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 5050,
+        "y": 740,
+        "wires": [
+            [
+                "22390a3bb9742512",
+                "eafb71c265c823fb"
+            ]
+        ]
+    },
+    {
+        "id": "eafb71c265c823fb",
+        "type": "debug",
+        "z": "85339f82785db2c3",
+        "name": "debug 33",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 5340,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "6f93b364bf882cfa",
+        "type": "debug",
+        "z": "85339f82785db2c3",
+        "name": "debug 34",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 5320,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "035479185f48a9ae",
+        "type": "function",
+        "z": "85339f82785db2c3",
+        "name": "\"/delete\" Command Translate Messages",
+        "func": "const DeleteCommandMessages = {\n    allDeleted: {\n        en: \"All your data has been successfully deleted 🫣\",\n        ru: \"Все ваши данные были успешно удалены 🫣\",\n        uk: \"Всі ваші дані було успішно видалено 🫣\"\n    }\n};\n\nflow.set('DeleteCommandMessages', DeleteCommandMessages);",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "507d55c6bd8644cc",
+        "type": "inject",
+        "z": "85339f82785db2c3",
+        "name": "\"/delete\" Command Translate Messages Setup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 240,
+        "y": 400,
+        "wires": [
+            [
+                "035479185f48a9ae"
+            ]
+        ]
+    }
+]
